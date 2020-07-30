@@ -119,7 +119,7 @@ for comb in combinations([i for i in range(players)], 2):
 	all_pairs.append(pair_list)
 	all_pairs.append(pair_list_r)
 
-for items in range(6,13):
+for items in range(10,13):
 
 	all_combs = [item for item in product([i for i in range(players)], repeat=items)]
 

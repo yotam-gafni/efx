@@ -1,5 +1,5 @@
 import random
-from itertools import product, combinations, permutations
+from itertools import product, combinations
 from copy import copy
 
 from wolframclient.evaluation import WolframLanguageSession
@@ -88,7 +88,7 @@ def is_comb_in_base(comb, base):
 	global lp_runs
 	lp_runs += 1
 
-	if lp_runs % 10000 == 0:
+	if lp_runs % 1000 == 0:
 		print("LP_RUNS: {}".format(lp_runs))
 
 	variable_string = "{"
@@ -248,6 +248,7 @@ def filter_pareto_dominated(allocs, true_combs_base, all_combs, good_combs, bad_
 	bad_combs = {0: set([]), 1: set([]), 2:set([])}
 
 	for alloc in allocs:
+		print("Pareto filter alloc number {}".format(int(running_ind/3**items)))
 		foundPD = False
 		for comb in  all_combs_copy:
 			running_ind += 1
@@ -308,8 +309,6 @@ def filter_pareto_dominated(allocs, true_combs_base, all_combs, good_combs, bad_
 	return filtered_allocs
 
 def filter_efx_envious(allocs, true_combs_base, all_combs, good_combs, bad_combs):
-	bad_combs = {0: set([]), 1: set([]), 2:set([])}
-
 	filtered_allocs = []
 	for alloc in allocs:
 		all_poss_j = []
@@ -395,89 +394,20 @@ def split_mandatory(all_combs):
 
 	return mandatory_combs, later_combs, latest_combs
 
-global leafs
-leafs = 0
+def only_2_2_3(all_combs):
+	reduced = []
+	for comb in all_combs:
+		counts = [0,0,0]
+		counts[0] = len([i for i in filter(lambda x: x==0, comb)])
+		counts[1] = len([i for i in filter(lambda x: x==1, comb)])
+		counts[2] = len([i for i in filter(lambda x: x==2, comb)])
 
+		counts.sort()
 
-def exhaustive_solve(allocs, true_combs_base, good_combs, evil_combs, add_log = []):
-	global leafs
-	#print("Looking into add log of length {}, add_log: {}".format(len(add_log),add_log))
-	init_len = len(allocs)
-	#print("SAMPLED ALLOCS BEFORE FILTER {}".format(len(allocs)))
-	allocs = filter_pareto_dominated(allocs, true_combs_base, all_combs, good_combs, evil_combs)
-	#print("SAMPLED ALLOCS AFTER PARETO FILTER {}".format(len(allocs)))
-	allocs = filter_efx_envious(allocs, true_combs_base, all_combs, good_combs, evil_combs)
-	#print("SAMPLED ALLOCS AFTER EFX FILTER {}".format(len(allocs)))
+		if counts == [2,2,3]:
+			reduced.append(comb)
 
-	if len(add_log) == 0:
-		print("Number of allocations: {}".format(len(allocs)))
-
-	if len(allocs) == 0:
-		print("All allocs filtered!")
-
-		valuations = {0: [], 1: [], 2:[]}
-
-		for player in range(players):
-			valuations[player] = generate_valuation(true_combs_base[player])
-
-		print(valuations)
-		import pdb
-		pdb.set_trace()
-		return True
-
-	for alloc in allocs:
-		for pair in all_pairs:
-			side1_items = []
-			side2_items = []
-			equ = copy(all_zeros)
-			for i in range(len(alloc)):
-				if alloc[i] == pair[0]:
-					side1_items.append(i)
-					equ[i] = 1
-				elif alloc[i] == pair[1]:
-					side2_items.append(i)
-					equ[i] = -1
-
-			for j in side2_items:
-				curr_equ = copy(equ)
-				curr_equ[j] = 0
-				if sum(curr_equ) == 0 and len(set(curr_equ)) == 1:
-					continue
-				anti_key = tuple(reverse_comb(curr_equ))
-				if not is_comb_in_base(anti_key, true_combs_base[pair[0]]) and not is_comb_in_base(curr_equ, true_combs_base[pair[0]]):
-					allocs_copy1 = copy(allocs)
-					allocs_copy2 = copy(allocs)
-					copy1_true_combs_base = {0: [], 1: [], 2: []}
-					copy2_true_combs_base = {0: [], 1: [], 2: []}
-					copy1_good_combs = {0: set([]), 1: set([]), 2: set([])}
-					copy1_evil_combs = {0: set([]), 1: set([]), 2: set([])}		
-					copy2_good_combs = {0: set([]), 1: set([]), 2: set([])}
-					copy2_evil_combs = {0: set([]), 1: set([]), 2: set([])}					
-					for i in range(players):
-						copy1_true_combs_base[i] = copy(true_combs_base[i])
-						copy2_true_combs_base[i] = copy(true_combs_base[i])
-						copy1_good_combs[i] = copy(good_combs[i]) 
-						copy1_evil_combs[i] = copy(evil_combs[i]) 
-						copy2_good_combs[i] = copy(good_combs[i]) 
-						copy2_evil_combs[i] = copy(evil_combs[i]) 
-
-					copy1_true_combs_base[pair[0]].append(tuple(curr_equ))
-					copy2_true_combs_base[pair[0]].append(tuple(anti_key))
-
-					#print("DIVING IN over alloc {}".format(alloc))
-
-					add_log1 = copy(add_log)
-					add_log2 = copy(add_log)
-
-					add_log1 += [tuple([pair[0], curr_equ])]
-					add_log2 += [tuple([pair[0], anti_key])]
-
-					return exhaustive_solve(allocs_copy1, copy1_true_combs_base, copy1_good_combs, copy1_evil_combs, add_log1) or exhaustive_solve(allocs_copy2, copy2_true_combs_base, copy2_good_combs, copy2_evil_combs, add_log2)
-
-	#print("Didn't find any equation to add, folding back".format(alloc))
-	leafs += 1
-	#print("Went through {} equation branches with current branch {}".format(leafs, add_log))
-	return False
+	return reduced
 
 
 players = 3
@@ -496,284 +426,245 @@ for items in range(6,7):
 	all_combs = [item for item in product([i for i in range(players)], repeat=items)]
 	all_eqs = [item for item in product([-1,0,1], repeat=items)]
 
+
+
+	allocs = copy(all_combs)
+
 	max_stop = 0
 	max_conf = {}
 
-	all_comb1 = [list(elem) for elem in permutations([2,3,4,5])]
-	all_comb2 = [list(elem) for elem in permutations([1,3,4,5])]
-	all_comb3 = [list(elem) for elem in permutations([1,2,4,5])]
+	for random_try in range(1000):
 
-	perm = [0,1,2,3,4,5]
+		print("RANDOM TRY: {}".format(random_try))
+		true_combs_base = {0: [], 1: [], 2: []}
 
-	running_ind = 0
-	for comb1 in all_comb1:
-		for comb2 in all_comb2:
-			for comb3 in all_comb3:
 
-				running_ind += 1
 
-				if comb1.index(2) > comb1.index(3):
-					continue
-				if comb1.index(4) > comb1.index(5):
-					continue
-				
-				preferences = []
+		all_zeros = [0 for j in range(items)]
+		good_combs = {0: set([]), 1: set([]), 2: set([])}
+		evil_combs = {0: set([]), 1: set([]), 2: set([])}
 
-				if running_ind < 1657:
-					continue
+		for eq in all_eqs:
+			counts = [0,0,0]
+			counts[0] = len([i for i in filter(lambda x: x==-1, eq)])
+			counts[1] = len([i for i in filter(lambda x: x==0, eq)])
+			counts[2] = len([i for i in filter(lambda x: x==1, eq)])
+
+			if (counts[0] == 1 and counts[2] == 0) or (counts[0] == 2 and counts[2] == 1):
 				for j in range(3):
-					if j == 0:
-						perm = [0,1] + comb1
-					if j == 1:
-						perm = [0,2] + comb2
-					elif j == 2:
-						perm = [0,3] + comb3
+					true_combs_base[j].append(eq)
+					good_combs[j].add(tuple(eq))
+					anti_eq = reverse_comb(eq)
+					evil_combs[j].add(tuple(anti_eq))
 
-					preferences.append(perm)	
 
-				"""eq_options = []
+		running_ind = 0
+		failed_run = False
 
+		stage = ""
+
+		firstTime = 0
+		interrupt = False
+		while not interrupt:
+			votes = {}
+			critical_level = {}
+
+			begin_length = len(allocs)
+
+			valuations = {0: [], 1: [], 2:[]}
+
+			#for player in range(players):
+			#	valuations[player] = generate_valuation(true_combs_base[player])
+
+			bad_combs = {0: set([]), 1: set([]), 2:set([])}
+			
+			random.shuffle(allocs)
+
+
+			sampled_allocs = allocs[:100]
+
+			print("SAMPLED ALLOCS BEFORE FILTER {}".format(len(sampled_allocs)))
+			if running_ind % 5 == 4:
+				fs_allocs = filter_pareto_dominated(sampled_allocs, true_combs_base, all_combs, good_combs, bad_combs)
+				print("SAMPLED ALLOCS AFTER PARETO FILTER {}".format(len(fs_allocs)))
+			else:
+				fs_allocs = sampled_allocs
+			fe_allocs = filter_efx_envious(fs_allocs, true_combs_base, all_combs, good_combs, bad_combs)
+			print("SAMPLED ALLOCS AFTER EFX FILTER {}".format(len(fe_allocs)))
+
+
+
+			valuations = {0: [], 1: [], 2:[]}
+
+			for player in range(players):
+				valuations[player] = generate_valuation(true_combs_base[player])
+
+
+			start = time.time()
+
+			all_poss_j = []
+			for alloc in fe_allocs:
 				for pair in all_pairs:
-					first = pair[0]
-					second = pair[1]
-					for i in range(players):
-						if i not in pair:
-							third = i
+					side1_items = []
+					side2_items = []
+					equ = copy(all_zeros)
+					for i in range(len(alloc)):
+						if alloc[i] == pair[0]:
+							side1_items.append(i)
+							equ[i] = 1
+						elif alloc[i] == pair[1]:
+							side2_items.append(i)
+							equ[i] = -1
 
-					top = copy(preferences[first][:2])
-					option1 = copy(preferences[second])
-					option2 = copy(preferences[third])
-					for elem in top:
-						option1.remove(elem)
-						option2.remove(elem)
-
-					option1 = option1[:2]
-
-					for elem in option1:
-						option2.remove(elem)
-
-					eq_options.append([tuple([second, option1]), tuple([third,option2])])"""
-
-
-				eq_ind = 0
-				for eq_opt in [item for item in product([i for i in range(4)], repeat=6)]:
-					eq_ind += 1
-
-					#if running_ind == 3 and eq_ind < 15:
-					#	continue
-
-					print("Running ind: {}, Equation ind: {}/{}".format(running_ind, eq_ind,4096))
-					true_combs_base = {0: [], 1: [], 2: []}
-
-					all_zeros = [0 for j in range(items)]
-					good_combs = {0: set([]), 1: set([]), 2: set([])}
-					evil_combs = {0: set([]), 1: set([]), 2: set([])}
-
-					for i in range(players):
-						true_combs_base[i] = []
-						for j in range(items):
-							unit_vector = copy(all_zeros)
-							unit_vector[j] = -1
-							true_combs_base[i].append(unit_vector)
-							good_combs[i].add(tuple(unit_vector))
-							anti_v = reverse_comb(unit_vector)
-							evil_combs[i].add(tuple(anti_v))
-					allocs = copy(all_combs)
-
-
-
-					for j in range(3):
-						perm = preferences[j]
-
-						print("Player {}, preference order {}".format(j, perm))
-						for i in range(5):
-							eq = [0] * 6
-							eq[perm[i]] = -1
-							eq[perm[i+1]] = 1
-							true_combs_base[j].append(eq)
-							good_combs[j].add(tuple(eq))
-							anti_eq = reverse_comb(eq)
-							evil_combs[j].add(tuple(anti_eq))
-
-
-					pair_ind = 0
-					move_on = True
-
-					for pair in all_pairs:
-
-						first = pair[0]
-						second = pair[1]
-						for i in range(players):
-							if i not in pair:
-								third = i
-
-						second_alloc = [preferences[second][1]]
-
-						third_alloc = copy(preferences[third])
-						third_alloc.remove(0)
-						third_alloc.remove(preferences[second][1])
-						if preferences[second][2] == preferences[third][1]:
-							third_alloc.remove(preferences[second][3])
-							second_alloc.append(preferences[second][3])
+					for j in side2_items:
+						curr_equ = copy(equ)
+						curr_equ[j] = 0
+						if sum(curr_equ) == 0 and len(set(curr_equ)) == 1:
+							continue
+						anti_key = tuple(reverse_comb(curr_equ))
+						if anti_key in evil_combs[pair[0]]:
+							continue
+						elif is_comb_in_base(anti_key, true_combs_base[pair[0]]):
+							evil_combs[pair[0]].add(anti_key)
+							continue
+						elif tuple([pair[0], tuple(curr_equ)]) in votes:
+							votes[tuple([pair[0],tuple(curr_equ)])] += 1
 						else:
-							third_alloc.remove(preferences[second][2])
-							second_alloc.append(preferences[second][2])
+							votes[tuple([pair[0],tuple(curr_equ)])] = 1
+						all_poss_j.append(tuple([pair[0], tuple(curr_equ)]))
+				for player, eq in all_poss_j:
+					if tuple([player, eq]) not in critical_level:
+						critical_level[tuple([player, eq])] = len(all_poss_j)
+					else:
+						critical_level[tuple([player, eq])] = min(critical_level[tuple([player, eq])], len(all_poss_j))
+				#random.shuffle(all_poss_j)
+			sorted_critical = sorted(critical_level.items(), key=lambda item: item[1]) 
 
-						if eq_opt[pair_ind] == 0:
-							pass
+			didAdd = False
+			for key, val in sorted_critical:
+				if val > 1:
+					break
+				if tuple(key[1]) in good_combs[key[0]]:
+					continue
+				anti_key = tuple(reverse_comb(key[1]))
+				if tuple(anti_key) in evil_combs[key[0]]:
+					print("Critical EFX constraint can not be added. Consider Pareto domination?")
+					import pdb
+					pdb.set_trace()
+					continue
+				elif is_comb_in_base(anti_key, true_combs_base[key[0]]):
+					evil_combs[player].add(anti_key)
+					print("Critical EFX constraint can not be added. Consider Pareto domination?")
+					import pdb
+					pdb.set_trace()
+					continue
+				else:
+					valuations= generate_valuation(true_combs_base[key[0]] + [tuple(key[1])])
+					if valuations is None:
+						import pdb
+						pdb.set_trace()
 
-						elif eq_opt[pair_ind] == 1:
-							third_alloc = third_alloc[1:]
-							third_alloc.append(second_alloc[0])
-							# add the 2<-->56 
+					good_combs[key[0]].add(tuple(key[1]))
+					true_combs_base[key[0]].append(tuple(key[1]))
+					didAdd = True
+					break
 
-							eq = [0] * 6
-							eq[third_alloc[2]] = 1
-							eq[third_alloc[0]] = -1
-							eq[third_alloc[1]] = -1
-							anti_eq = reverse_comb(eq)
+			#print(sorted_votes)
+			if not didAdd:
 
-							if not is_comb_in_base(anti_eq, true_combs_base[second]):
-								true_combs_base[second].append(eq)
-								good_combs[second].add(tuple(eq))
-								evil_combs[second].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break
+				f_votes = {}
 
-							if not is_comb_in_base(eq, true_combs_base[third]):
-								true_combs_base[third].append(anti_eq)
-								good_combs[third].add(tuple(anti_eq))
-								evil_combs[third].add(tuple(eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-						
-						elif eq_opt[pair_ind] == 2:
-							third_alloc = third_alloc[1:]
-							third_alloc.append(second_alloc[1])		
-							# add the 4<-->56 
-
-							eq = [0] * 6
-							eq[third_alloc[2]] = 1
-							eq[third_alloc[0]] = -1
-							eq[third_alloc[1]] = -1
-							
-							anti_eq = reverse_comb(eq)
-
-							if not is_comb_in_base(anti_eq, true_combs_base[first]):
-								true_combs_base[first].append(eq)
-								good_combs[first].add(tuple(eq))
-								evil_combs[first].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-
-							if not is_comb_in_base(eq, true_combs_base[second]):
-								true_combs_base[second].append(anti_eq)
-								good_combs[second].add(tuple(anti_eq))
-								evil_combs[second].add(tuple(eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-
-						elif eq_opt[pair_ind] == 3:
-							# add the 1<-->24
-							eq = [0] * 6
-							eq[0] = 1
-							eq[second_alloc[0]] = -1
-							eq[second_alloc[1]] = -1
-							anti_eq = reverse_comb(eq)
-
-							if not is_comb_in_base(anti_eq, true_combs_base[second]):
-								true_combs_base[second].append(eq)
-								good_combs[second].add(tuple(eq))
-								evil_combs[second].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break
-
-							if not is_comb_in_base(eq, true_combs_base[third]):
-								true_combs_base[third].append(anti_eq)
-								good_combs[third].add(tuple(anti_eq))
-								evil_combs[third].add(tuple(eq))
-
-							else:
-								print("ooh")
-								move_on = False
-								break
-
-						dominating_two = []
-
-						for elem in preferences[first]:
-							if elem in third_alloc:
-								dominating_two.append(elem)
-								if len(dominating_two) == 2:
-									break
-
-						eq = [0] * 6
-						eq[0] = 1
-						eq[dominating_two[0]] = -1
-						eq[dominating_two[1]] = -1
-						true_combs_base[first].append(eq)
-						good_combs[first].add(tuple(eq))
-						anti_eq = reverse_comb(eq)
-						evil_combs[first].add(tuple(anti_eq))
-
-						pair_ind += 1
-
-					"""for i in range(6):
-						j, rel = eq_options[i][eq_opt[i]]
-						eq = [0] * 6
-						eq[0] = -1
-						eq[rel[0]] = 1
-						eq[rel[1]] = 1
-						true_combs_base[j].append(eq)
-						good_combs[j].add(tuple(eq))
-						anti_eq = reverse_comb(eq)
-						evil_combs[j].add(tuple(anti_eq))"""
-
-					if move_on == False:
+				for key, val in critical_level.items():
+					player, eq = key
+					anti_eq = tuple(reverse_comb(eq))
+					if anti_eq in evil_combs[player]:
 						continue
+					elif is_comb_in_base(anti_eq, true_combs_base[player]):
+						evil_combs[player].add(anti_eq)
+					else:
+						f_votes[key] = val
 
-					# Add the 3-1 envy
-					eq = [0] * 6
-					eq[0] = -1
-					eq[3] = 1
-					eq[4] = 1
-					eq[5] = 1
-
-					anti_key = reverse_comb(eq)
-
-					for i in range(players):
-						if not is_comb_in_base(anti_key, true_combs_base[i]):
-							true_combs_base[i].append(eq)
-							good_combs[i].add(tuple(eq))
-							anti_eq = reverse_comb(eq)
-							evil_combs[i].add(tuple(anti_eq))
-						else:
-							print("ooh")
-							move_on = False
-							break
-
-
-					if move_on == False:
+				sorted_votes = sorted(f_votes.items(), key=lambda item: item[1]) 
+				count_cand = 0
+				candid = []
+				for key, val in sorted_votes:
+					if count_cand >= 20:
+						break 
+					if tuple(key[1]) in good_combs[key[0]]:
 						continue
+					anti_key = tuple(reverse_comb(key[1]))
+					if tuple(anti_key) in evil_combs[key[0]]:
+						continue
+					elif is_comb_in_base(anti_key, true_combs_base[key[0]]):
+						evil_combs[player].add(anti_key)
+					else:
+						candid.append([key, val])
+						count_cand += 1
 
 
-					copy_good_combs = {0: set([]), 1: set([]), 2: set([])}
-					copy_evil_combs = {0: set([]), 1: set([]), 2: set([])}					
-					for i in range(players):
-						copy_good_combs[i] = copy(good_combs[i]) 
-						copy_evil_combs[i] = copy(evil_combs[i]) 
+				min_val = 1000 * 1000
+				min_arg = []
+				for key, val in candid:
+					tcb = copy(true_combs_base[key[0]] + [key[1]])
+					bad_val = autocorr(f_votes.keys(), tcb, key[0])
+					print("For eq {} critical_val = {}, bad_val = {}".format(key, val, bad_val))
+					if bad_val == 0:
+						min_arg = key
+						break
+					else:
+						if val * bad_val < min_val:
+							min_val = val * bad_val
+							min_arg = key
 
-					leafs = 0
-					exhaustive_solve(allocs, true_combs_base, copy_good_combs, copy_evil_combs)
+				print("CHOSE {} FOR THE NEXT ROUND".format(min_arg))
+				if min_arg == []:
+					interrupt = True
+					break
+				good_combs[min_arg[0]].add(tuple(min_arg[1]))
+				true_combs_base[min_arg[0]].append(tuple(min_arg[1]))
+			allocs = copy(fe_allocs + allocs[100:])
+
+			end_length = len(allocs)
+
+			if end_length < 60 and firstTime == 0:
+				firstTime = 1
+				print("true_combs_base = {}".format(true_combs_base))
+				print("allocs = {}".format(allocs))
+				print("good_combs = {}".format(good_combs))
+				print("evil_combs = {}".format(evil_combs))
+
+			elif end_length < 40 and firstTime < 2:
+				firstTime = 2
+				print("true_combs_base = {}".format(true_combs_base))
+				print("allocs = {}".format(allocs))
+				print("good_combs = {}".format(good_combs))
+				print("evil_combs = {}".format(evil_combs))
+
+
+			#print("COVERED {}/{} ALLOCATIONS".format(players**items - len(allocs), players**items))
+			running_ind += 1
+			const_num = 0
+			for player in range(players):
+				const_num += len(true_combs_base[player])
+			
+
+			print("ITEMS: {}, STAGE: {}, ATTEMPT {}, COMBINATION NUM {}, CONSTRAINT NUMBER {}, GOOD+EVIL = {}, F_VOTES = {}, ALLOCS = {}".format(items, stage, random_try,running_ind, const_num, sum([len(good_combs[player])+len(evil_combs[player]) for player in range(3)]), len(f_votes), len(allocs)))
 
 
 
+			if len(allocs) == 0:
+				valuations = {0: [], 1: [], 2:[]}
+
+				for player in range(players):
+					valuations[player] = generate_valuation(true_combs_base[player])
+
+				print(valuations)
+				print("GREAT SUCCESS")
+				import pdb
+				pdb.set_trace()
+		valuations = {0: [], 1: [], 2:[]}
+
+		for player in range(players):
+			valuations[player] = generate_valuation(true_combs_base[player])
+
+		print(valuations)

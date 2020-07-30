@@ -6,7 +6,359 @@ from wolframclient.evaluation import WolframLanguageSession
 from wolframclient.language import wl, wlexpr
 session = WolframLanguageSession()
 
+import pickle
 import time
+
+one_eq_confs = [
+					[[-1,[1,2]]],
+					[[1,[1,2]],[-1,[1,3]]],
+					[[1,[1,3]],[-1,[2,3]]],
+					[[1,[1,4]],[-1,[1,5]],[-1,[2,3]]],
+					[[1,[1,5]],[-1,[2,3]]],
+					[[-1,[1,4]],[1,[2,3]]],
+					[[1,[1,4]],[-1,[1,5]],[1,[2,3]],[-1,[2,4]]],
+					[[1,[1,5]],[-1,[2,4]]],
+					[[-1,[1,5]],[1,[2,4]],[-1,[3,4]]],
+					[[1,[3,4]],[-1,[1,5]]],
+					[[1,[2,4]],[1,[1,5]],[-1,[3,4]],[-1,[2,5]]],
+					[[-1,[3,4]],[1,[2,5]]],
+					[[1,[3,4]],[-1,[2,5]]],
+					[[1,[3,4]],[1,[2,5]],[-1,[3,5]]],
+					[[1,[3,5]],[-1,[4,5]]],
+					[[1,[4,5]]],
+					]
+
+two_eq_confs = [
+					[[-1,[2,3]]],
+					[[1,[2,3]],[-1,[2,4]]],
+					[[1,[2,4]],[-1,[2,5]],[-1,[3,4]]],
+					[[1,[2,5]],[-1,[3,4]]],
+					[[-1,[2,5]],[1,[3,4]]],
+					[[1,[2,5]],[-1,[3,5]],[1,[3,4]]],
+					[[1,[3,5]],[-1,[4,5]]],
+					[[1,[4,5]]]
+					]
+
+three_eq_confs = [
+					[[-1,[3,4]]],
+					[[1,[3,4]],[-1,[3,5]]],
+					[[1,[3,5]],[-1,[4,5]]],
+					[[1,[4,5]]]
+				]
+
+four_eq_confs = [
+					[[-1,[4,5]]],
+					[[1,[4,5]]],
+				]
+
+
+extra_one_eq_confs = [
+						[[-1,[1,2,3]]],
+						[[1,[1,2,3]],[-1,[1,2,4]]],
+						[[1,[1,2,4]],[-1,[1,2,5]],[1,[2,3,4]]],
+						[[1,[1,2,4]],[-1,[1,2,5]],[-1,[2,3,4]]],
+						[[1,[1,2,5]],[-1,[2,3,4]]],
+						[[1,[1,2,5]],[-1,[2,3,5]],[1,[2,3,4]]],
+						[[1,[2,3,5]],[-1,[2,4,5]]],
+						[[1,[2,4,5]],[-1,[3,4,5]]],
+						[[1,[3,4,5]]]
+					 ]
+
+extra_two_eq_confs = [
+						[[-1,[2,3,4]]],
+						[[1,[2,3,4]],[-1,[2,3,5]]],
+						[[1,[2,3,5]],[-1,[2,4,5]]],
+						[[1,[2,4,5]],[-1,[3,4,5]]],
+						[[1,[3,4,5]]]
+					 ]
+
+extra_three_eq_confs = [
+						[[-1,[3,4,5]]],
+						[[1,[3,4,5]]]
+						]
+
+quartet = [
+			[[1,5],[3,4]],
+			[[1,4],[2,3]],
+			[[1,5],[2,3]],
+			[[2,5],[3,4]]
+			]
+
+
+def presets(pref):
+	one_eqs = []
+
+	for conf in one_eq_confs:
+		one_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			pair = equ[1]
+			eq[pref[0]] = factor
+			eq[pref[pair[0]]] = -1 * factor
+			eq[pref[pair[1]]] = -1 * factor
+
+			one_eq.append(eq)
+		one_eqs.append(one_eq)	
+
+	two_eqs = []
+	for conf in two_eq_confs:
+		two_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			pair = equ[1]
+			eq[pref[1]] = factor
+			eq[pref[pair[0]]] = -1 * factor
+			eq[pref[pair[1]]] = -1 * factor
+
+			two_eq.append(eq)
+		two_eqs.append(two_eq)	
+
+	three_eqs = []
+	for conf in three_eq_confs:
+		three_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			pair = equ[1]
+			eq[pref[2]] = factor
+			eq[pref[pair[0]]] = -1 * factor
+			eq[pref[pair[1]]] = -1 * factor
+
+			three_eq.append(eq)
+		three_eqs.append(three_eq)	
+
+	four_eqs = []
+	for conf in four_eq_confs:
+		four_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			pair = equ[1]
+			eq[pref[3]] = factor
+			eq[pref[pair[0]]] = -1 * factor
+			eq[pref[pair[1]]] = -1 * factor
+
+			four_eq.append(eq)
+		four_eqs.append(four_eq)
+
+	extra_one_eqs = []
+	for conf in extra_one_eq_confs:
+		extra_one_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			tri = equ[1]
+			eq[pref[0]] = factor
+			eq[pref[tri[0]]] = -1 * factor
+			eq[pref[tri[1]]] = -1 * factor
+			eq[pref[tri[2]]] = -1 * factor
+
+			extra_one_eq.append(eq)
+		extra_one_eqs.append(extra_one_eq)	
+
+	extra_two_eqs = []
+	for conf in extra_two_eq_confs:
+		extra_two_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			tri = equ[1]
+			eq[pref[0]] = factor
+			eq[pref[tri[0]]] = -1 * factor
+			eq[pref[tri[1]]] = -1 * factor
+			eq[pref[tri[2]]] = -1 * factor
+			
+			extra_two_eq.append(eq)
+		extra_two_eqs.append(extra_two_eq)	
+
+	extra_three_eqs = []
+	for conf in extra_three_eq_confs:
+		extra_three_eq = []
+
+		for equ in conf:
+			eq = [0] * 6
+			factor = equ[0]
+			tri = equ[1]
+			eq[pref[0]] = factor
+			eq[pref[tri[0]]] = -1 * factor
+			eq[pref[tri[1]]] = -1 * factor
+			eq[pref[tri[2]]] = -1 * factor
+			
+			extra_three_eq.append(eq)
+		extra_three_eqs.append(extra_three_eq)	
+
+	comb_1_2 = []
+
+	for i in range(8):
+		if i == 0:
+			for j in range(5):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))
+
+		elif i == 1:
+			for j in range(8):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+		elif i == 2:
+			for j in range(9):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+			j = 10
+			comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+		elif i == 3:
+			for j in range(9):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+			for j in [10,11]:
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+		elif i == 4:
+			for j in range(11):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+			j = 12
+			comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+		elif i == 5:
+			for j in range(14):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))	
+
+		elif i == 6:
+			for j in range(15):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))		
+
+		elif i == 7:
+			for j in range(16):
+				comb_1_2.append(copy(one_eqs[j] + two_eqs[i]))
+
+	comb_1_3 = []
+	for i in range(4):
+		if i == 0:
+			for j in range(34):
+				comb_1_3.append(copy(comb_1_2[j] + three_eqs[i]))
+
+		elif i == 1:
+			for j in range(60):
+				comb_1_3.append(copy(comb_1_2[j] + three_eqs[i]))	
+
+		elif i == 2:
+			for j in range(75):
+				comb_1_3.append(copy(comb_1_2[j] + three_eqs[i]))		
+		
+		elif i == 3:
+			for j in range(91):
+				comb_1_3.append(copy(comb_1_2[j] + three_eqs[i]))	
+
+
+	all_eqs = []
+	for i in range(2):
+		if i == 0:
+			for j in range(169):
+				all_eqs.append(copy(comb_1_3[j] + four_eqs[i]))
+
+		elif i == 1:
+			for j in range(260):
+				all_eqs.append(copy(comb_1_3[j] + four_eqs[i]))	
+
+
+	comb_extra_1_2 = []
+
+	for i in range(5):
+		if i == 0:
+			for j in range(5):
+				comb_extra_1_2.append(copy(extra_one_eqs[j] + extra_two_eqs[i]))
+
+		elif i == 1:
+			for j in range(6):
+				comb_extra_1_2.append(copy(extra_one_eqs[j] + extra_two_eqs[i]))
+
+		elif i == 2:
+			for j in range(7):
+				comb_extra_1_2.append(copy(extra_one_eqs[j] + extra_two_eqs[i]))
+		
+		elif i == 3:
+			for j in range(8):
+				comb_extra_1_2.append(copy(extra_one_eqs[j] + extra_two_eqs[i]))
+		elif i == 4:
+			for j in range(9):
+				comb_extra_1_2.append(copy(extra_one_eqs[j] + extra_two_eqs[i]))
+
+	comb_extra_1_3 = []
+
+	for i in range(2):
+		if i == 0:
+			for j in range(26):
+				comb_extra_1_3.append(copy(comb_extra_1_2[j] + extra_three_eqs[i]))
+
+		elif i == 1:
+			for j in range(35):
+				comb_extra_1_3.append(copy(comb_extra_1_2[j] + extra_three_eqs[i]))
+	
+	all_extra_eqs = []
+	ordinal_eqs = []
+	for i in range(5):
+		eq = [0] * 6
+		eq[pref[i]] = -1
+		eq[pref[i+1]] = 1
+		ordinal_eqs.append(eq)
+
+	# these are goods
+	eq = [0] * 6
+	eq[pref[0]] = -1
+	ordinal_eqs.append(eq)
+
+	for eq_opt in [item for item in product([i for i in range(2)], repeat=4)]:
+		local_eqs = []
+		for i in range(4):
+			dec = eq_opt[i]
+			side1, side2 = quartet[i]
+			factor = 1
+			if dec == 0:
+				factor = -1
+
+			eq = [0] * 6
+			for elem in side1:
+				eq[pref[elem]] = 1 * factor
+			for elem in side2:
+				eq[pref[elem]] = -1 * factor
+
+			local_eqs.append(eq)
+
+		for eqset in comb_extra_1_3:
+			ret_val = generate_valuation(eqset + local_eqs + ordinal_eqs)
+			if ret_val is not None:
+				all_extra_eqs.append(copy(eqset + local_eqs))
+
+	print("Extra eqs number: {}/{}".format(len(all_extra_eqs),61*16))
+
+	all_final_eqs = []
+	run_ind = 0
+	for eqset1 in all_eqs:
+		for eqset2 in all_extra_eqs:
+			if run_ind % 1000 == 0:
+				print("Running: {}".format(run_ind))
+			run_ind += 1
+			ret_val = generate_valuation(eqset1 + eqset2 + ordinal_eqs)
+			if ret_val is not None:
+				all_final_eqs.append(copy(eqset1 + eqset2))
+
+	print("Final eqs number: {}/{}".format(len(all_final_eqs),64*476))
+
+	import pdb
+	pdb.set_trace()
+	outfile = open("eqs_6", "wb")
+	pickle.dump(all_final_eqs,outfile)
+	return all_final_eqs
+
+
+
 
 
 arrays = []
@@ -66,9 +418,8 @@ def generate_valuation(base):
 				try:
 					valuation.append(is_feasible[1][item][1][0] / is_feasible[1][item][1][1])
 				except Exception as e:
-					for i in range(1000):
-						print("UNFEASIBLE CONSTRAINTS!!!!")
-						return None
+					#print("UNFEASIBLE CONSTRAINTS!!!!")
+					return None
 	except Exception as e:
 		print("EXCEPTION IN GENERATE VALUATION")
 		import pdb
@@ -411,6 +762,7 @@ def exhaustive_solve(allocs, true_combs_base, good_combs, evil_combs, add_log = 
 
 	if len(add_log) == 0:
 		print("Number of allocations: {}".format(len(allocs)))
+		return
 
 	if len(allocs) == 0:
 		print("All allocs filtered!")
@@ -506,274 +858,106 @@ for items in range(6,7):
 	perm = [0,1,2,3,4,5]
 
 	running_ind = 0
-	for comb1 in all_comb1:
-		for comb2 in all_comb2:
-			for comb3 in all_comb3:
+	all_eqs = presets(perm)
+	#infile = open("eqs_6", "rb")
+	#all_eqs = pickle.load(infile)
+
+	for eq_set1 in all_eqs:
+		for eq_set2 in all_eqs:
+			for eq_set3 in all_eqs:
 
 				running_ind += 1
-
-				if comb1.index(2) > comb1.index(3):
-					continue
-				if comb1.index(4) > comb1.index(5):
-					continue
 				
 				preferences = []
 
-				if running_ind < 1657:
-					continue
 				for j in range(3):
-					if j == 0:
-						perm = [0,1] + comb1
-					if j == 1:
-						perm = [0,2] + comb2
-					elif j == 2:
-						perm = [0,3] + comb3
+					preferences.append(perm)
 
-					preferences.append(perm)	
+				print("Running ind: {}".format(running_ind))
+				true_combs_base = {0: [], 1: [], 2: []}
 
-				"""eq_options = []
+				all_zeros = [0 for j in range(items)]
+				good_combs = {0: set([]), 1: set([]), 2: set([])}
+				evil_combs = {0: set([]), 1: set([]), 2: set([])}
 
-				for pair in all_pairs:
-					first = pair[0]
-					second = pair[1]
-					for i in range(players):
-						if i not in pair:
-							third = i
-
-					top = copy(preferences[first][:2])
-					option1 = copy(preferences[second])
-					option2 = copy(preferences[third])
-					for elem in top:
-						option1.remove(elem)
-						option2.remove(elem)
-
-					option1 = option1[:2]
-
-					for elem in option1:
-						option2.remove(elem)
-
-					eq_options.append([tuple([second, option1]), tuple([third,option2])])"""
-
-
-				eq_ind = 0
-				for eq_opt in [item for item in product([i for i in range(4)], repeat=6)]:
-					eq_ind += 1
-
-					#if running_ind == 3 and eq_ind < 15:
-					#	continue
-
-					print("Running ind: {}, Equation ind: {}/{}".format(running_ind, eq_ind,4096))
-					true_combs_base = {0: [], 1: [], 2: []}
-
-					all_zeros = [0 for j in range(items)]
-					good_combs = {0: set([]), 1: set([]), 2: set([])}
-					evil_combs = {0: set([]), 1: set([]), 2: set([])}
-
-					for i in range(players):
-						true_combs_base[i] = []
-						for j in range(items):
-							unit_vector = copy(all_zeros)
-							unit_vector[j] = -1
-							true_combs_base[i].append(unit_vector)
-							good_combs[i].add(tuple(unit_vector))
-							anti_v = reverse_comb(unit_vector)
-							evil_combs[i].add(tuple(anti_v))
-					allocs = copy(all_combs)
+				for i in range(players):
+					true_combs_base[i] = []
+					for j in range(items):
+						unit_vector = copy(all_zeros)
+						unit_vector[j] = -1
+						true_combs_base[i].append(unit_vector)
+						good_combs[i].add(tuple(unit_vector))
+						anti_v = reverse_comb(unit_vector)
+						evil_combs[i].add(tuple(anti_v))
+				allocs = copy(all_combs)
 
 
 
-					for j in range(3):
-						perm = preferences[j]
+				for j in range(3):
+					perm = preferences[j]
 
-						print("Player {}, preference order {}".format(j, perm))
-						for i in range(5):
-							eq = [0] * 6
-							eq[perm[i]] = -1
-							eq[perm[i+1]] = 1
-							true_combs_base[j].append(eq)
-							good_combs[j].add(tuple(eq))
-							anti_eq = reverse_comb(eq)
-							evil_combs[j].add(tuple(anti_eq))
-
-
-					pair_ind = 0
-					move_on = True
-
-					for pair in all_pairs:
-
-						first = pair[0]
-						second = pair[1]
-						for i in range(players):
-							if i not in pair:
-								third = i
-
-						second_alloc = [preferences[second][1]]
-
-						third_alloc = copy(preferences[third])
-						third_alloc.remove(0)
-						third_alloc.remove(preferences[second][1])
-						if preferences[second][2] == preferences[third][1]:
-							third_alloc.remove(preferences[second][3])
-							second_alloc.append(preferences[second][3])
-						else:
-							third_alloc.remove(preferences[second][2])
-							second_alloc.append(preferences[second][2])
-
-						if eq_opt[pair_ind] == 0:
-							pass
-
-						elif eq_opt[pair_ind] == 1:
-							third_alloc = third_alloc[1:]
-							third_alloc.append(second_alloc[0])
-							# add the 2<-->56 
-
-							eq = [0] * 6
-							eq[third_alloc[2]] = 1
-							eq[third_alloc[0]] = -1
-							eq[third_alloc[1]] = -1
-							anti_eq = reverse_comb(eq)
-
-							if not is_comb_in_base(anti_eq, true_combs_base[second]):
-								true_combs_base[second].append(eq)
-								good_combs[second].add(tuple(eq))
-								evil_combs[second].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break
-
-							if not is_comb_in_base(eq, true_combs_base[third]):
-								true_combs_base[third].append(anti_eq)
-								good_combs[third].add(tuple(anti_eq))
-								evil_combs[third].add(tuple(eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-						
-						elif eq_opt[pair_ind] == 2:
-							third_alloc = third_alloc[1:]
-							third_alloc.append(second_alloc[1])		
-							# add the 4<-->56 
-
-							eq = [0] * 6
-							eq[third_alloc[2]] = 1
-							eq[third_alloc[0]] = -1
-							eq[third_alloc[1]] = -1
-							
-							anti_eq = reverse_comb(eq)
-
-							if not is_comb_in_base(anti_eq, true_combs_base[first]):
-								true_combs_base[first].append(eq)
-								good_combs[first].add(tuple(eq))
-								evil_combs[first].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-
-							if not is_comb_in_base(eq, true_combs_base[second]):
-								true_combs_base[second].append(anti_eq)
-								good_combs[second].add(tuple(anti_eq))
-								evil_combs[second].add(tuple(eq))
-							else:
-								print("ooh")
-								move_on = False
-								break	
-
-						elif eq_opt[pair_ind] == 3:
-							# add the 1<-->24
-							eq = [0] * 6
-							eq[0] = 1
-							eq[second_alloc[0]] = -1
-							eq[second_alloc[1]] = -1
-							anti_eq = reverse_comb(eq)
-
-							if not is_comb_in_base(anti_eq, true_combs_base[second]):
-								true_combs_base[second].append(eq)
-								good_combs[second].add(tuple(eq))
-								evil_combs[second].add(tuple(anti_eq))
-							else:
-								print("ooh")
-								move_on = False
-								break
-
-							if not is_comb_in_base(eq, true_combs_base[third]):
-								true_combs_base[third].append(anti_eq)
-								good_combs[third].add(tuple(anti_eq))
-								evil_combs[third].add(tuple(eq))
-
-							else:
-								print("ooh")
-								move_on = False
-								break
-
-						dominating_two = []
-
-						for elem in preferences[first]:
-							if elem in third_alloc:
-								dominating_two.append(elem)
-								if len(dominating_two) == 2:
-									break
-
+					print("Player {}, preference order {}".format(j, perm))
+					for i in range(5):
 						eq = [0] * 6
-						eq[0] = 1
-						eq[dominating_two[0]] = -1
-						eq[dominating_two[1]] = -1
-						true_combs_base[first].append(eq)
-						good_combs[first].add(tuple(eq))
-						anti_eq = reverse_comb(eq)
-						evil_combs[first].add(tuple(anti_eq))
-
-						pair_ind += 1
-
-					"""for i in range(6):
-						j, rel = eq_options[i][eq_opt[i]]
-						eq = [0] * 6
-						eq[0] = -1
-						eq[rel[0]] = 1
-						eq[rel[1]] = 1
+						eq[perm[i]] = -1
+						eq[perm[i+1]] = 1
 						true_combs_base[j].append(eq)
 						good_combs[j].add(tuple(eq))
 						anti_eq = reverse_comb(eq)
-						evil_combs[j].add(tuple(anti_eq))"""
+						evil_combs[j].add(tuple(anti_eq))
 
-					if move_on == False:
-						continue
+				for eq in eq_set1:
+					anti_eq = reverse_comb(eq)
+					#if not is_comb_in_base(anti_eq, true_combs_base[0]):
+					true_combs_base[0].append(eq)
+					good_combs[0].add(tuple(eq))
+					anti_eq = reverse_comb(eq)
+					evil_combs[0].add(tuple(anti_eq))	
+					#else:
+					#	print("oops...")
+					#	import pdb
+					#	pdb.set_trace()
 
-					# Add the 3-1 envy
-					eq = [0] * 6
-					eq[0] = -1
-					eq[3] = 1
-					eq[4] = 1
-					eq[5] = 1
-
-					anti_key = reverse_comb(eq)
-
-					for i in range(players):
-						if not is_comb_in_base(anti_key, true_combs_base[i]):
-							true_combs_base[i].append(eq)
-							good_combs[i].add(tuple(eq))
-							anti_eq = reverse_comb(eq)
-							evil_combs[i].add(tuple(anti_eq))
-						else:
-							print("ooh")
-							move_on = False
-							break
-
-
-					if move_on == False:
-						continue
+				for eq in eq_set2:
+					anti_eq = reverse_comb(eq)
+					#if not is_comb_in_base(anti_eq, true_combs_base[1]):
+					true_combs_base[1].append(eq)
+					good_combs[1].add(tuple(eq))
+					anti_eq = reverse_comb(eq)
+					evil_combs[1].add(tuple(anti_eq))	
+					#else:
+					#	print("oops...")
+					#	import pdb
+					#	pdb.set_trace()
 
 
-					copy_good_combs = {0: set([]), 1: set([]), 2: set([])}
-					copy_evil_combs = {0: set([]), 1: set([]), 2: set([])}					
-					for i in range(players):
-						copy_good_combs[i] = copy(good_combs[i]) 
-						copy_evil_combs[i] = copy(evil_combs[i]) 
+				for eq in eq_set3:
+					anti_eq = reverse_comb(eq)
+					#if not is_comb_in_base(anti_eq, true_combs_base[2]):
+					true_combs_base[2].append(eq)
+					good_combs[2].add(tuple(eq))
+					anti_eq = reverse_comb(eq)
+					evil_combs[2].add(tuple(anti_eq))
+					#else:
+					#	print("oops...")
+					#	import pdb
+					#	pdb.set_trace()
 
-					leafs = 0
-					exhaustive_solve(allocs, true_combs_base, copy_good_combs, copy_evil_combs)
+				allocs = filter_efx_envious(allocs, true_combs_base, all_combs, good_combs, evil_combs)
+
+				if len(allocs) == 0:
+					print("huh")
+					import pdb
+					pdb.set_trace()
+
+				allocs = filter_pareto_dominated(allocs, true_combs_base, all_combs, good_combs, evil_combs)
+
+				if len(allocs) == 0:
+					print("WOOPEE")
+					import pdb
+					pdb.set_trace()
+				else:
+					print("Allocs after filter: {}".format(len(allocs)))
 
 
 
